@@ -35,20 +35,20 @@ public class MainActivity extends AppCompatActivity {
     // The four supported arithmetic operations
     private enum Op { NONE, ADD, SUB, MUL, DIV }
 
-    // ---- Core state machine fields ----
-    private String currentInput = "0";     // string currently shown on the display
-    private double operandOne = 0;         // first operand already committed
-    private Op pendingOp = Op.NONE;        // operator waiting to be applied
-    private boolean startNewNumber = true; // true if the next digit press should start a fresh number
-    private boolean hasError = false;      // true while the calculator is in the Error state
+    // Core state machine
+    private String currentInput = "0";
+    private double operandOne = 0;
+    private Op pendingOp = Op.NONE;
+    private boolean startNewNumber = true;
+    private boolean hasError = false;
 
-    // ---- Repeat-equals support (pressing "=" repeatedly re-applies the last operation, iOS-style) ----
-    private double lastOperand = 0;        // second operand used in the previous "=" press
-    private Op lastOp = Op.NONE;           // operator used in the previous "=" press
+    // Repeat-equals support: pressing "=" again re-applies the last operation (iOS-style)
+    private double lastOperand = 0;
+    private Op lastOp = Op.NONE;
 
-    // ---- Expression line state (shown above the result, Google Calculator style) ----
-    private String expressionText = "";      // completed expression text, e.g. "6 + 3 +"
-    private String highlightOpSymbol = null; // symbol of the currently active operator, used for highlighting
+    // Expression line shown above the result, e.g. "6 + 3 +"
+    private String expressionText = "";
+    private String highlightOpSymbol = null;
 
     private TextView display;
     private TextView expressionView;
@@ -58,8 +58,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // App background is white, so use dark status bar icons (otherwise they blend
-        // into the white content that Android 15+ draws edge-to-edge behind the status bar).
+        // Dark status bar icons, needed since content draws edge-to-edge behind it on Android 15+
         WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView())
                 .setAppearanceLightStatusBars(true);
 
@@ -73,7 +72,7 @@ public class MainActivity extends AppCompatActivity {
         display = findViewById(R.id.display);
         expressionView = findViewById(R.id.expression);
 
-        // Configure display to auto-shrink text for long numbers (API 14+ compat)
+        // Auto-shrink display text for long numbers
         TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
                 display, 20, 72, 2, TypedValue.COMPLEX_UNIT_SP);
 
@@ -125,10 +124,7 @@ public class MainActivity extends AppCompatActivity {
         ((Button) findViewById(id)).setOnClickListener((View v) -> onDigit(digit));
     }
 
-    /**
-     * Attaches a subtle scale-down animation on press and scale-up on release.
-     * Returns false so the click listener still fires normally.
-     */
+    /** Scales the button down on press and back up on release. */
     private void addPressAnimation(View v) {
         v.setOnTouchListener((view, event) -> {
             switch (event.getAction()) {
@@ -148,8 +144,7 @@ public class MainActivity extends AppCompatActivity {
                         .start();
                     break;
             }
-            // Return false so click events are NOT consumed — onClick still fires
-            return false;
+            return false; // don't consume the event, let onClick still fire
         });
     }
 
@@ -163,16 +158,13 @@ public class MainActivity extends AppCompatActivity {
 
         if (startNewNumber) {
             if (pendingOp == Op.NONE) {
-                // Starting a brand new calculation → clear the old expression line
                 clearExpression();
             }
             currentInput = d;
             startNewNumber = false;
         } else if (currentInput.equals("0")) {
-            // Replace the leading zero instead of appending (avoid "05")
-            currentInput = d;
+            currentInput = d; // replace leading zero instead of appending (avoid "05")
         } else {
-            // Enforce the digit limit (not counting the minus sign or decimal point)
             if (countDigits(currentInput) >= MAX_DIGITS) return;
             currentInput = currentInput + d;
         }
@@ -191,12 +183,10 @@ public class MainActivity extends AppCompatActivity {
             currentInput = "0.";
             startNewNumber = false;
         } else if (!currentInput.contains(".")) {
-            // Guard: only add a decimal point if the number doesn't already have one
             if (countDigits(currentInput) < MAX_DIGITS) {
                 currentInput = currentInput + ".";
             }
         }
-        // If a "." is already present, silently ignore the press (prevents "3.1.4")
         updateDisplay();
         updateExpressionDisplay();
     }
@@ -207,9 +197,7 @@ public class MainActivity extends AppCompatActivity {
         String opSymbol = symbolFor(op);
 
         if (pendingOp != Op.NONE && !startNewNumber) {
-            // A pending operation exists and the user just finished entering the
-            // second operand → evaluate the intermediate result first
-            // (chained expressions, e.g. "5 + 3 ×")
+            // second operand already entered → evaluate the intermediate result (chained expression)
             double b = parseDouble(currentInput);
             try {
                 double result = calculate(operandOne, b, pendingOp);
@@ -221,10 +209,8 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
         } else if (pendingOp != Op.NONE) {
-            // User changed their mind right after picking an operator → replace it
-            expressionText = replaceLastOperator(expressionText, opSymbol);
+            expressionText = replaceLastOperator(expressionText, opSymbol); // swap the pending operator
         } else {
-            // No pending operation yet → start a new expression line
             operandOne = parseDouble(currentInput);
             expressionText = formatResult(operandOne) + " " + opSymbol;
         }
@@ -237,23 +223,18 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Handles the "=" press and refreshes the display with the result.
-     * First press: evaluates the pending operation.
-     * Subsequent presses: repeats the last operation (iOS-style),
-     * e.g. 5 + 5 = → 10, = → 15, = → 20.
+     * Handles the "=" press. First press evaluates the pending operation; subsequent
+     * presses repeat the last operation (iOS-style): 5 + 5 = → 10, = → 15, = → 20.
      */
     private void onEquals() {
         if (hasError) return;
 
         if (pendingOp == Op.NONE) {
-            // No new operation queued — try to repeat the last completed one
             if (lastOp == Op.NONE) {
-                // Nothing has been calculated yet → just clear the expression line
                 clearExpression();
                 updateExpressionDisplay();
                 return;
             }
-            // Repeat: current result becomes operand one, lastOperand is operand two
             double a = parseDouble(currentInput);
             try {
                 double result = calculate(a, lastOperand, lastOp);
@@ -272,15 +253,11 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        // First "=" press: evaluate the pending operation.
-        // If the second operand was never entered, currentInput still holds a
-        // valid number (the first operand), so this never crashes.
         double b = parseDouble(currentInput);
         try {
             double result = calculate(operandOne, b, pendingOp);
             expressionText = expressionText + " " + currentInput + " =";
-            // Remember this operation so a later repeated "=" press can reuse it
-            lastOperand = b;
+            lastOperand = b; // remembered for a later repeated "=" press
             lastOp = pendingOp;
             currentInput = formatResult(result);
             operandOne = result;

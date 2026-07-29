@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="calc_red">#FC4C4C</color>
+    <color name="calc_number_bg">#F4F4F4</color>
+    <color name="calc_background">#FFFFFF</color>
+    <color name="calc_display_text">#111111</color>
+    <color name="calc_text_on_red">#FFFFFF</color>
+    <color name="calc_number_text">#111111</color>
+    <color name="calc_expression_text">#999999</color>
+    <color name="calc_expression_op_highlight_bg">#26FC4C4C</color>
+    <color name="ripple_on_number">#33888888</color>
+    <color name="ripple_on_red">#33FFFFFF</color>
+</resources>

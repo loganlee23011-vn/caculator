@@ -1,0 +1,9 @@
+<resources>
+    <dimen name="display_text_size">72sp</dimen>
+    <dimen name="button_text_size">26sp</dimen>
+    <dimen name="button_size">76dp</dimen>
+    <dimen name="button_margin">6dp</dimen>
+    <dimen name="grid_padding">12dp</dimen>
+    <dimen name="display_padding">24dp</dimen>
+    <dimen name="expression_text_size">28sp</dimen>
+</resources>
